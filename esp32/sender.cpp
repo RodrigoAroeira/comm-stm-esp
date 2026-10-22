@@ -4,6 +4,7 @@
 #include <cstring>
 
 #include "../shared.h"
+#include "bluetooth_handler.h"
 #include "protocol.h"
 #include "wifi_handler.h"
 
@@ -17,6 +18,7 @@ void setup() {
   STM32_Serial.begin(115200, SERIAL_8N1, STM32_UART_RX_PIN, STM32_UART_TX_PIN);
 
   start_wifi();
+  start_bluetooth();
 }
 
 void loop() {
