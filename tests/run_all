@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+
+# Runs every test script in this directory. Requires the ESP32 to be
+# reachable (Wi-Fi and/or Bluetooth).
+
+set -uo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Debian/Ubuntu ship it as `fdfind`.
+if command -v fd >/dev/null 2>&1; then
+  FD=(fd)
+elif command -v fdfind >/dev/null 2>&1; then
+  FD=(fdfind)
+else
+  echo "[-] fd (fd-find) is required to run this suite" >&2
+  exit 1
+fi
+
+has_error=false
+
+# -t f : files only (never the tests/ directory itself)
+# --extension sh --extension py : only the runnable scripts
+# mapfile keeps one path per element; a quoted $(...) would collapse the
+# whole listing into a single word.
+mapfile -t files < <("${FD[@]}" --type f --extension sh --extension py . "$SCRIPT_DIR" | sort)
+
+if [[ ${#files[@]} -eq 0 ]]; then
+  echo "[-] No test scripts found in $SCRIPT_DIR" >&2
+  exit 1
+fi
+
+for file in "${files[@]}"; do
+  echo "Found $file"
+  if ! "$file"; then
+    has_error=true
+  fi
+done
+
+if $has_error; then
+  echo "[-] Some tests failed" >&2
+  exit 1
+fi
+
+echo "[+] All tests passed"
