@@ -1,77 +1,23 @@
 #include <Arduino.h>
 #include <ArduinoJson.h>
-#include <ESPAsyncWebServer.h>
-#include <WiFi.h>
 
 #include <cstring>
 
 #include "../shared.h"
+#include "protocol.h"
+#include "wifi_handler.h"
 
 #define STM32_UART_RX_PIN 16 // Reader
 #define STM32_UART_TX_PIN 17 // Transmiter
 
 HardwareSerial STM32_Serial(1);
-AsyncWebServer server(80);
 
-// #define ssid "esp32"
-// #define passphrase "optma"
-
-// Forward declaration
-bool processAndSendJson(const char *jsonStr);
-
-void start_wifi() {
-  // Wi-Fi Credentials
-  constexpr const char *ssid = "OptmaLab2";
-  constexpr const char *passphrase = "optma_lab_at";
-
-  Serial.println("Beginning...");
-  // USB Serial for PC Debug / Direct Cable Interface
+void setup() {
   Serial.begin(115200);
-
-  // Hardware UART to STM32
   STM32_Serial.begin(115200, SERIAL_8N1, STM32_UART_RX_PIN, STM32_UART_TX_PIN);
 
-  // Connect to Wi-Fi
-  WiFi.begin(ssid, passphrase);
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    Serial.print(".");
-    Serial.flush();
-  }
-  Serial.println("\nWi-Fi Connected! IP Address: " + WiFi.localIP().toString());
-
-  // HTTP Endpoint: POST http://<esp32-ip>/api/run-test
-  server.on(
-      "/api/run-test", HTTP_POST, [](AsyncWebServerRequest *request) {},
-      nullptr,
-      [](AsyncWebServerRequest *request, uint8_t *data, size_t len,
-         size_t index, size_t total) {
-        // Null-terminate the incoming string
-        char jsonBuf[len + 1];
-        memcpy(jsonBuf, data, len);
-        jsonBuf[len] = '\0';
-
-        Serial.println("Received json:");
-        Serial.println(jsonBuf);
-        // Convert and forward to STM32
-        const char *status;
-        int code;
-        if (processAndSendJson(jsonBuf)) {
-          status = "FORWARD_SUCCESS";
-          code = 200;
-        } else {
-          status = "FORWARD_FAIL";
-          code = 400;
-        }
-        std::string content =
-            std::string("{\"status\":") + '"' + status + "\"}";
-        request->send(code, "application/json", content.c_str());
-      });
-
-  server.begin();
+  start_wifi();
 }
-
-void setup() { start_wifi(); }
 
 void loop() {
   // Listen on USB Cable (Serial Monitor / PC Control)
